@@ -20,7 +20,7 @@ make -j4
 ```
 
 ## Running
-In project directory, run the build/QcvMotion executable.
+In project directory, run the build/CvqMotion executable.
 
 
 ## License
