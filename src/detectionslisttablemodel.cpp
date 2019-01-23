@@ -36,31 +36,28 @@ DetectionsListTableModel::Record::Record(time_t t, QString &name, double vel, do
 
 }
 
-DetectionsListTableModel::Record::~Record() {
-}
+DetectionsListTableModel::Record::~Record() = default;
 
-/*
-DetectionsListTableModel::DetectionsListTableModel(QObject *parent) {
-	(void)parent;
-}
-*/
-
-DetectionsListTableModel::~DetectionsListTableModel() {
+DetectionsListTableModel::~DetectionsListTableModel()
+{
 	for(Record *r: records)
 		delete r;
 }
 
-int DetectionsListTableModel::rowCount(const QModelIndex &parent) const {
+int DetectionsListTableModel::rowCount(const QModelIndex &parent) const
+{
 	Q_UNUSED(parent);
 	return static_cast<int>(records.size());
 }
 
-int DetectionsListTableModel::columnCount(const QModelIndex &parent) const {
+int DetectionsListTableModel::columnCount(const QModelIndex &parent) const
+{
 	Q_UNUSED(parent);
 	return Record::FIELD_COUNT;
 }
 
-QVariant DetectionsListTableModel::data(const QModelIndex &index, int role) const {
+QVariant DetectionsListTableModel::data(const QModelIndex &index, int role) const
+{
 	if (!index.isValid())
 		return QVariant();
 
@@ -94,7 +91,8 @@ QVariant DetectionsListTableModel::data(const QModelIndex &index, int role) cons
 	}
 }
 
-QVariant DetectionsListTableModel::headerData(int section, Qt::Orientation orientation, int role) const {
+QVariant DetectionsListTableModel::headerData(int section, Qt::Orientation orientation, int role) const
+{
 	if (orientation != Qt::Horizontal )
 		return QVariant();
 
@@ -135,12 +133,14 @@ QVariant DetectionsListTableModel::headerData(int section, Qt::Orientation orien
 	return QVariant();
 }
 
-Qt::ItemFlags DetectionsListTableModel::flags(const QModelIndex &index) const {
+Qt::ItemFlags DetectionsListTableModel::flags(const QModelIndex &index) const
+{
 	Q_UNUSED(index);
 	return Qt::ItemIsSelectable | Qt::ItemIsEnabled;
 }
 
-void DetectionsListTableModel::newDetection(QString zone, double dir, double vel, QImage image) {
+void DetectionsListTableModel::newDetection(QString zone, double dir, double vel, QImage image)
+{
 	time_t time = std::time(nullptr);
 
 	Record *r = new Record(time, zone, vel, dir, image);

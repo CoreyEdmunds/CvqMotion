@@ -39,7 +39,8 @@ DetectionZone::DetectionZone(string name, cv::Rect zone, double pixelsPerMeter, 
 		throw out_of_range("DetectionZone::DetectionZone: acceptWidth out of range");
 }
 
-bool DetectionZone::acceptableAngle(double angle) {
+bool DetectionZone::acceptableAngle(double angle)
+{
 	double minAngle = acceptAngle + M_PI*2.0 - 0.5 * acceptWidth;
 	double maxAngle = acceptAngle + M_PI*2.0 + 0.5 * acceptWidth;
 	angle += M_PI*2.0;

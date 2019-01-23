@@ -32,6 +32,7 @@ AboutDialog::~AboutDialog()
 	delete ui;
 }
 
-void AboutDialog::invoke() {
+void AboutDialog::invoke()
+{
 	this->show();
 }

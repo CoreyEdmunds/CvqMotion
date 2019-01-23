@@ -27,7 +27,8 @@ namespace cvqm {
 	class DetectionZone;
 }
 
-class cvqm::DetectionZone {
+class cvqm::DetectionZone
+{
 public:
 	const std::string name;
 	const bool directional;

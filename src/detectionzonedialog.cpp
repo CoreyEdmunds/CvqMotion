@@ -38,7 +38,8 @@ DetectionZoneDialog::DetectionZoneDialog(QWidget *parent) :
 	ui->lineEdit_PixelsPerMeter->setValidator(&PPM_VALIDATOR);
 }
 
-void DetectionZoneDialog::invokeDialog(int x, int y, int w, int h) {
+void DetectionZoneDialog::invokeDialog(int x, int y, int w, int h)
+{
 	this->x = x;
 	this->y = y;
 	this->w = w;
@@ -51,7 +52,8 @@ DetectionZoneDialog::~DetectionZoneDialog()
 	delete ui;
 }
 
-void DetectionZoneDialog::accept() {
+void DetectionZoneDialog::accept()
+{
 	double pixelsPerMeter = ui->lineEdit_PixelsPerMeter->text().toDouble();
 	double direction = ui->lineEdit_Direction->text().toDouble();
 	double acceptanceAngle = ui->lineEdit_AcceptanceAngle->text().toDouble();
@@ -63,7 +65,8 @@ void DetectionZoneDialog::accept() {
 }
 
 
-void DetectionZoneDialog::updatePixelsPerMeter(double ppm) {
+void DetectionZoneDialog::updatePixelsPerMeter(double ppm)
+{
 	if ( fpclassify(ppm) != FP_NORMAL )
 		ppm = 0;
 	ui->lineEdit_PixelsPerMeter->setText(QString::fromStdString(to_string(ppm)));

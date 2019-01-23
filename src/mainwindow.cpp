@@ -86,7 +86,8 @@ MainWindow::MainWindow(QWidget *parent) :
 	ui->splitter->setSizes(sizes);
 }
 
-void MainWindow::configureDebugMenu() {
+void MainWindow::configureDebugMenu()
+{
 	QString view("View ");
 	ui->actionView_Background_Delta->setText(view + BACKGROUND_DIFFERENCE);
 	ui->actionView_Blur->setText(view + BLURRED_INPUT);
@@ -107,10 +108,10 @@ void MainWindow::configureDebugMenu() {
 	connect(this->ui->actionView_Original_Frame, &QAction::toggled, this->p, &VideoProcessorController::setShowOriginal);
 	connect(this->ui->actionView_Output, &QAction::toggled, this->p, &VideoProcessorController::setShowOutput);
 	connect(this->ui->actionView_Source, &QAction::toggled, this->p, &VideoProcessorController::setShowOriginal);
-
 }
 
-void MainWindow::toolgroupExclusive(QAction *trigger) {
+void MainWindow::toolgroupExclusive(QAction *trigger)
+{
 	if ( trigger->isChecked() )
 		for(QAction *i: trigger->actionGroup()->actions())
 			if ( i != trigger )

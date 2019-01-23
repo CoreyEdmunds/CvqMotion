@@ -44,7 +44,8 @@ CameraView::CameraView(QWidget *parent) : QGraphicsView(parent)
 	this->setDragMode(DragMode::RubberBandDrag);
 }
 
-void CameraView::newImage(QImage img) {
+void CameraView::newImage(QImage img)
+{
 	if ( this->background ) {
 		this->scene.removeItem(this->background);
 		delete this->background;
@@ -53,7 +54,8 @@ void CameraView::newImage(QImage img) {
 	updateForegroundScene();
 }
 
-void CameraView::updateForegroundScene() {
+void CameraView::updateForegroundScene()
+{
 	if ( this->foreground ) {
 		this->scene.removeItem(this->foreground);
 		delete this->foreground;
@@ -76,12 +78,13 @@ void CameraView::updateForegroundScene() {
 		break;
 	default:
 		stringstream ss;
-		ss << "CameraView::updateRender:  Invalid CameraViewMode" << this->pressedMode;
+		ss << "CameraView::updateRender:  Invalid CameraViewMode " << this->pressedMode;
 		throw invalid_argument(ss.str());
 	}
 }
 
-void CameraView::mousePressEvent(QMouseEvent *event) {
+void CameraView::mousePressEvent(QMouseEvent *event)
+{
 	QPoint pt = convertAndClamp(event->pos());
 
 	this->measurementLine.setP1(pt);
@@ -95,38 +98,44 @@ void CameraView::mousePressEvent(QMouseEvent *event) {
 	//cout << " CameraView::mousePressEvent X=" << pt.x() << " Y=" << pt.y()  << endl;
 }
 
-void CameraView::getRectangleCoordinates(int &x, int &y, int &w, int &h) {
+void CameraView::getRectangleCoordinates(int &x, int &y, int &w, int &h)
+{
 	x = min(this->selectionArea.topLeft().x(), this->selectionArea.bottomRight().x());
 	y = min(this->selectionArea.topLeft().y(), this->selectionArea.bottomRight().y());
 	w = max(this->selectionArea.topLeft().x(), this->selectionArea.bottomRight().x()) - x;
 	h = max(this->selectionArea.topLeft().y(), this->selectionArea.bottomRight().y()) - y;
 };
 
-void CameraView::addMaskZone() {
+void CameraView::addMaskZone()
+{
 	int x, y, w, h;
 	getRectangleCoordinates(x, y, w, h);
 	newIgnoreZone(x, y, w, h);
 }
 
-void CameraView::addDetectionZone() {
+void CameraView::addDetectionZone()
+{
 	int x, y, w, h;
 	getRectangleCoordinates(x, y, w, h);
 	newDetectionZone(x, y, w, h);
 }
 
-void CameraView::removeZones() {
+void CameraView::removeZones()
+{
 	int x, y, w, h;
 	getRectangleCoordinates(x, y, w, h);
 	deleteZonesAt(x, y);
 }
 
-void CameraView::performMeasure() {
+void CameraView::performMeasure()
+{
 	int x, y, w, h;
 	getRectangleCoordinates(x, y, w, h);
 	newMeasurement(sqrt(w*w + h*h));
 }
 
-void CameraView::mouseReleaseEvent(QMouseEvent *event) {
+void CameraView::mouseReleaseEvent(QMouseEvent *event)
+{
 	Q_UNUSED(event);
 	switch(this->pressedMode) {
 	case CameraViewMode::DETECTION_ZONE:
@@ -145,7 +154,7 @@ void CameraView::mouseReleaseEvent(QMouseEvent *event) {
 		break;
 	default:
 		stringstream ss;
-		ss << "CameraView::mouseReleaseEvent:  Invalid CameraViewMode" << this->pressedMode;
+		ss << "CameraView::mouseReleaseEvent:  Invalid CameraViewMode " << this->pressedMode;
 		throw invalid_argument(ss.str());
 	}
 
@@ -155,7 +164,8 @@ void CameraView::mouseReleaseEvent(QMouseEvent *event) {
 	//cout << " CameraView::mouseReleaseEvent X=" << event->x() << " Y=" << event->y() << endl;
 }
 
-QPoint CameraView::convertAndClamp(QPoint pt) {
+QPoint CameraView::convertAndClamp(QPoint pt)
+{
 	QPointF pt_f = mapToScene(pt);
 	double x = pt_f.x();
 	x = min(max(0.0, x), this->scene.width() + 0.0);
@@ -164,7 +174,8 @@ QPoint CameraView::convertAndClamp(QPoint pt) {
 	return QPoint(static_cast<int>(x), static_cast<int>(y));
 }
 
-void CameraView::mouseMoveEvent(QMouseEvent *event) {
+void CameraView::mouseMoveEvent(QMouseEvent *event)
+{
 	QPoint pt = convertAndClamp(event->pos());
 
 	this->measurementLine.setP2(pt);
@@ -174,7 +185,8 @@ void CameraView::mouseMoveEvent(QMouseEvent *event) {
 }
 
 
-void CameraView::actionAdd_Detection_Zone_Toggled(bool val) {
+void CameraView::actionAdd_Detection_Zone_Toggled(bool val)
+{
 	if ( val )
 		this->currentMode = CameraViewMode::DETECTION_ZONE;
 	else if ( this->currentMode == CameraViewMode::DETECTION_ZONE )
@@ -182,21 +194,24 @@ void CameraView::actionAdd_Detection_Zone_Toggled(bool val) {
 
 }
 
-void CameraView::actionAdd_Mask_Zone_Toggled(bool val){
+void CameraView::actionAdd_Mask_Zone_Toggled(bool val)
+{
 	if ( val )
 		this->currentMode = CameraViewMode::MASK_ZONE;
 	else if ( this->currentMode == CameraViewMode::MASK_ZONE )
 		this->currentMode = CameraViewMode::NONE;
 }
 
-void CameraView::actionMeasure_Distance_Toggled(bool val){
+void CameraView::actionMeasure_Distance_Toggled(bool val)
+{
 	if ( val )
 		this->currentMode = CameraViewMode::MEASURE_DISTANCE;
 	else if ( this->currentMode == CameraViewMode::MEASURE_DISTANCE )
 		this->currentMode = CameraViewMode::NONE;
 }
 
-void CameraView::actionRemove_Zone_Toggled(bool val){
+void CameraView::actionRemove_Zone_Toggled(bool val)
+{
 	if ( val )
 		this->currentMode = CameraViewMode::REMOVE_ZONE;
 	else if ( this->currentMode == CameraViewMode::REMOVE_ZONE )

@@ -36,22 +36,26 @@ MeasurementDialog::MeasurementDialog(QWidget *parent) :
 	this->ui->lineEdit_LengthMeters->setValidator(&LINE_EDIT_VALIDATOR);
 }
 
-void MeasurementDialog::reset(double pixelLength) {
+void MeasurementDialog::reset(double pixelLength)
+{
 	setPixelLength(pixelLength);
 	setMetersLength(0);
 }
 
-void MeasurementDialog::setMetersLength(double meters){
+void MeasurementDialog::setMetersLength(double meters)
+{
 		this->metersLength = meters;
 		this->ui->lineEdit_LengthMeters->setText(QString::fromStdString(to_string(meters)));
 }
 
-void MeasurementDialog::setPixelLength(double pixels){
+void MeasurementDialog::setPixelLength(double pixels)
+{
 		this->pixelLength = pixels;
 		this->ui->lineEdit_LengthPixels->setText(QString::fromStdString(to_string(pixels)));
 }
 
-void MeasurementDialog::updateCalculation() {
+void MeasurementDialog::updateCalculation()
+{
 	this->ppm = pixelLength / metersLength;
 
 	int classification = fpclassify(this->ppm);
@@ -62,7 +66,8 @@ void MeasurementDialog::updateCalculation() {
 	}
 }
 
-void MeasurementDialog::lineEdit_LengthInMeters_TextChanged(QString text) {
+void MeasurementDialog::lineEdit_LengthInMeters_TextChanged(QString text)
+{
 	bool ok;
 	double result = text.toDouble(&ok);
 	if ( ok ) {
@@ -71,12 +76,14 @@ void MeasurementDialog::lineEdit_LengthInMeters_TextChanged(QString text) {
 	}
 }
 
-void MeasurementDialog::invokeDialog(double pixelLength) {
+void MeasurementDialog::invokeDialog(double pixelLength)
+{
 	reset(pixelLength);
 	this->show();
 }
 
-void MeasurementDialog::accept() {
+void MeasurementDialog::accept()
+{
 	lengthComputed(this->ppm);
 	QDialog::accept();
 }

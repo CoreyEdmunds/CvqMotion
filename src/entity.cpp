@@ -25,19 +25,22 @@ using namespace cvqm;
 using namespace std;
 using namespace cv;
 
-Entity::Entity(Rect &box, ulong lastUpdateFrameId) {
+Entity::Entity(Rect &box, ulong lastUpdateFrameId)
+{
 	//this->id = id;
 	this->box = box;
 	this->lastUpdateFrameId = lastUpdateFrameId;
 }
 
-Entity::~Entity() {
+Entity::~Entity()
+{
 	for(auto it: bbHistory) {
 		delete it;
 	}
 }
 
-Rect Entity::deadRecon(double frameTime) {
+Rect Entity::deadRecon(double frameTime)
+{
 	double dt;
 	if ( bbHistory.empty() )
 		dt = 0;
@@ -48,25 +51,29 @@ Rect Entity::deadRecon(double frameTime) {
 			box.y + static_cast<int>(vel[1]*dt), box.width, box.height);
 }
 
-void Entity::assignId(ulong id) {
+void Entity::assignId(ulong id)
+{
 	this->id = id;
 }
 
-void Entity::calculateVelocity(Rect &r1, Rect &r2, double velocity[], double dt, double multiplier) {
+void Entity::calculateVelocity(Rect &r1, Rect &r2, double velocity[], double dt, double multiplier)
+{
 	double dx = (r1.x + r1.width*0.5) - (r2.x + r2.width*0.5);
 	double dy = (r1.y + r1.height*0.5) - (r2.y + r2.height*0.5);
 	velocity[0] = dx/dt * multiplier;
 	velocity[1] = dy/dt * multiplier;
 }
 
-double Entity::getBearingRadians() {
+double Entity::getBearingRadians()
+{
 	double bearing = atan2(this->vel[1],this->vel[0]);
 	if ( bearing < 0 )
 		bearing += 2 * M_PI;
 	return bearing;
 }
 
-void Entity::calculateVelocityBearing(double &vel, double &bearing, double pixelsPerMeter) {
+void Entity::calculateVelocityBearing(double &vel, double &bearing, double pixelsPerMeter)
+{
 	vel = sqrt(this->vel[0]*this->vel[0] + this->vel[1]*this->vel[1]);
 	vel /= pixelsPerMeter;
 	vel *= 3.6;  // m/s -> km/h
@@ -75,7 +82,8 @@ void Entity::calculateVelocityBearing(double &vel, double &bearing, double pixel
 		bearing += 360.0;
 }
 
-void Entity::update(Rect *newBox, ulong frameId, double frameTime) {
+void Entity::update(Rect *newBox, ulong frameId, double frameTime)
+{
 	pair<double, Rect>* newer = new pair<double, Rect>(frameTime, *newBox);
 	this->box = *newBox;
 	this->bbHistory.push_front(newer);
@@ -95,7 +103,8 @@ void Entity::update(Rect *newBox, ulong frameId, double frameTime) {
 	this->lastUpdateFrameId = frameId;
 }
 
-string Entity::str() {
+string Entity::str()
+{
 	ostringstream str;
 	str << "E" << " " << id << " " << box;
 	return str.str();

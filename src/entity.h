@@ -30,7 +30,8 @@ namespace cvqm {
 	class Entity;
 }
 
-class cvqm::Entity {
+class cvqm::Entity
+{
 public:
 	std::list<std::pair<double, cv::Rect>*> bbHistory;
 	std::map<DetectionZone *, ulong> detections;

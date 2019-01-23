@@ -52,7 +52,8 @@ DeviceControlWidget::~DeviceControlWidget()
 	delete ui;
 }
 
-void DeviceControlWidget::startButtonClicked() {
+void DeviceControlWidget::startButtonClicked()
+{
 	bool deviceIdOk = false;
 	int deviceId = ui->comboBox_InputDevice->currentText().toInt(&deviceIdOk) - 1;
 	bool xResOk = false;
@@ -82,13 +83,15 @@ void DeviceControlWidget::startButtonClicked() {
 		start(deviceId, xRes, yRes);
 }
 
-void DeviceControlWidget::setControlsEnabled(bool state) {
+void DeviceControlWidget::setControlsEnabled(bool state)
+{
 	ui->comboBox_InputDevice->setEnabled(state);
 	ui->lineEdit_XResolution->setEnabled(state);
 	ui->lineEdit_YResolution->setEnabled(state);
 }
 
-void DeviceControlWidget::runStateChanged(bool state) {
+void DeviceControlWidget::runStateChanged(bool state)
+{
 	setControlsEnabled(!state);
 	if ( state )
 		ui->pushButton_StartStop->setText("Stop");
@@ -98,7 +101,8 @@ void DeviceControlWidget::runStateChanged(bool state) {
 	this->runState = state;
 }
 
-void DeviceControlWidget::runFailure(QString reason) {
+void DeviceControlWidget::runFailure(QString reason)
+{
 	errorMsgbox->setText(reason);
 	errorMsgbox->show();
 	ui->pushButton_StartStop->setEnabled(true);
