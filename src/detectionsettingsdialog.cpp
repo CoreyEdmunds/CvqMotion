@@ -54,14 +54,16 @@ DetectionSettingsDialog::~DetectionSettingsDialog()
 	delete ui;
 }
 
-void DetectionSettingsDialog::invokeDialog(const shared_ptr<cvqm::VideoProcessorDetectionSettings> settings) {
+void DetectionSettingsDialog::invokeDialog(const shared_ptr<cvqm::VideoProcessorDetectionSettings> settings)
+{
 	cvqm::VideoProcessorDetectionSettings *s = settings.get();
 	load(s);
 	this->show();
 }
 
 
-double DetectionSettingsDialog::doubleFrom(QLineEdit *edit) {
+double DetectionSettingsDialog::doubleFrom(QLineEdit *edit)
+{
 	bool ok = false;
 	double result = edit->text().toDouble(&ok);
 	if ( !ok )
@@ -69,7 +71,8 @@ double DetectionSettingsDialog::doubleFrom(QLineEdit *edit) {
 	return result;
 }
 
-float DetectionSettingsDialog::floatFrom(QLineEdit *edit) {
+float DetectionSettingsDialog::floatFrom(QLineEdit *edit)
+{
 	bool ok = false;
 	float result = edit->text().toFloat(&ok);
 	if ( !ok )
@@ -77,7 +80,8 @@ float DetectionSettingsDialog::floatFrom(QLineEdit *edit) {
 	return result;
 }
 
-unsigned long DetectionSettingsDialog::longFrom(QLineEdit *edit) {
+unsigned long DetectionSettingsDialog::longFrom(QLineEdit *edit)
+{
 	bool ok = false;
 	long result = edit->text().toLong(&ok);
 	if ( !ok )
@@ -85,7 +89,8 @@ unsigned long DetectionSettingsDialog::longFrom(QLineEdit *edit) {
 	return static_cast<unsigned long>(result);
 }
 
-int DetectionSettingsDialog::intFrom(QLineEdit *edit) {
+int DetectionSettingsDialog::intFrom(QLineEdit *edit)
+{
 	bool ok = false;
 	int result = edit->text().toInt(&ok);
 	if ( !ok )
@@ -93,7 +98,8 @@ int DetectionSettingsDialog::intFrom(QLineEdit *edit) {
 	return result;
 }
 
-void DetectionSettingsDialog::handleButton(QAbstractButton *button) {
+void DetectionSettingsDialog::handleButton(QAbstractButton *button)
+{
 	if ( button == ui->buttonBox->button(QDialogButtonBox::Apply) ) {
 		apply();
 	} else if ( button == ui->buttonBox->button(QDialogButtonBox::Reset) ) {
@@ -102,7 +108,8 @@ void DetectionSettingsDialog::handleButton(QAbstractButton *button) {
 	}
 }
 
-void DetectionSettingsDialog::load(cvqm::VideoProcessorDetectionSettings *s) {
+void DetectionSettingsDialog::load(cvqm::VideoProcessorDetectionSettings *s)
+{
 	ui->lineEdit_BackgroundBlendRatio->setText(QString::fromStdString(to_string(s->background_blend_ratio)));
 	ui->lineEdit_ForegroundBlendRatio->setText(QString::fromStdString(to_string(s->foreground_blend_ratio)));
 	ui->lineEdit_ForegroundOverloadRatio->setText(QString::fromStdString(to_string(s->foreground_overload_level)));
@@ -116,9 +123,12 @@ void DetectionSettingsDialog::load(cvqm::VideoProcessorDetectionSettings *s) {
 	ui->lineEdit_dilateDetectionFactor->setText(QString::fromStdString(to_string(s->dilateDetectionFactor)));
 	ui->lineEdit_entityTimeout->setText(QString::fromStdString(to_string(s->entity_timeout)));
 	ui->lineEdit_thresholdTimeout->setText(QString::fromStdString(to_string(s->threshold_timeout)));
+	ui->checkBox_Greyscale->setChecked(s->greyscale);
+
 }
 
-void DetectionSettingsDialog::apply() {
+void DetectionSettingsDialog::apply()
+{
 	auto *s = new cvqm::VideoProcessorDetectionSettings();
 	s->background_blend_ratio = floatFrom(ui->lineEdit_BackgroundBlendRatio);
 	s->foreground_blend_ratio = floatFrom(ui->lineEdit_ForegroundBlendRatio);
@@ -133,11 +143,12 @@ void DetectionSettingsDialog::apply() {
 	s->dilateDetectionFactor = intFrom(ui->lineEdit_dilateDetectionFactor);
 	s->entity_timeout = longFrom(ui->lineEdit_entityTimeout);
 	s->threshold_timeout = longFrom(ui->lineEdit_thresholdTimeout);
-
+	s->greyscale = ui->checkBox_Greyscale->checkState() == Qt::CheckState::Checked;
 	applySettings(shared_ptr<cvqm::VideoProcessorDetectionSettings>(s));
 }
 
-void DetectionSettingsDialog::accept() {
+void DetectionSettingsDialog::accept()
+{
 	apply();
 	QDialog::accept();
 }

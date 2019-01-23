@@ -42,57 +42,73 @@ const Scalar VideoProcessor::CONTOUR_COLOUR = Scalar( 0,0,255 );
 
 VideoProcessor::VideoProcessor() = default;
 
-VideoProcessor::~VideoProcessor() {
+VideoProcessor::~VideoProcessor()
+{
 	for(Entity *e: this->entities)
 		delete e;
 	for(DetectionZone *z: this->detectionZones)
 		delete z;
 	for(Rect *r: this->maskZones)
 		delete r;
+	delete this->thresholdTime;
 }
 
-void VideoProcessor::setDeviceId(int id) {
+void VideoProcessor::setDeviceId(int id)
+{
 	this->device_id = id;
 }
 
-void VideoProcessor::setResolution(int xRes, int yRes) {
+void VideoProcessor::setResolution(int xRes, int yRes)
+{
 	this->xRes = xRes;
 	this->yRes = yRes;
 }
 
-void VideoProcessor::run() {
-
+void VideoProcessor::run()
+{
 	VideoCapture cap(this->device_id);
 	cap.set(CV_CAP_PROP_FRAME_WIDTH, xRes);
 	cap.set(CV_CAP_PROP_FRAME_HEIGHT, yRes);
 
 	if(!cap.isOpened()) {
-		string err = "Unable to open ";
-		err += to_string(this->device_id);
+		string err = "Unable to open " + to_string(this->device_id);
 		throw new invalid_argument(err);
 	}
 
+	bool greyscale;
+	{
+			lock_guard<mutex> datastructureLock(this->dsMutex);
+			greyscale = this->s.greyscale;
+	}
+
 	Mat backgroundFrame;
-	cap >> backgroundFrame;
+	{
+		Mat frame;
+		cap >> frame;
+		if ( greyscale )
+			cvtColor(frame, backgroundFrame, CV_BGR2GRAY);
+		else
+			backgroundFrame = frame;
+	}
+
 	Rect borderRect(1, 1, backgroundFrame.cols-2, backgroundFrame.rows-2);
 
-	auto frameLength = static_cast<ulong>(backgroundFrame.rows * backgroundFrame.cols * 3l);
+	if ( this->thresholdTime != nullptr )
+		delete this->thresholdTime;
+	auto frameLength = static_cast<ulong>(backgroundFrame.rows * backgroundFrame.cols * backgroundFrame.channels());
 	thresholdTime = new uint[frameLength];
 	memset(thresholdTime, 0, frameLength * sizeof(uint));
 
 	auto t0 = chrono::system_clock::now();
-
 	double lastFrameTime = 0;
-	for(;;) {
-		Mat dilateDetectionKernel = getStructuringElement(MORPH_ELLIPSE,
-														  Size(2*s.dilateDetectionFactor, 2*s.dilateDetectionFactor),
-														  Point(s.dilateDetectionFactor,s.dilateDetectionFactor)
-														  );
-		Mat frame;
-		cap >> frame;
-		this->frameIdCounter++;
-		showDebugWindow(frame, ORIGINAL_INPUT, showOriginal, destroyOriginal);
 
+	for(;;) {
+		Mat sourceFrame;
+		cap >> sourceFrame;
+		this->frameIdCounter++;
+		showDebugWindow(sourceFrame, ORIGINAL_INPUT, showOriginal, destroyOriginal);
+
+		// Calculate frame timestamps for velocity calculations
 		auto t1 = chrono::system_clock::now();
 		chrono::duration<double> frameTimeDuration = t1-t0;
 
@@ -100,11 +116,17 @@ void VideoProcessor::run() {
 		double dFrameTime = frameTime - lastFrameTime;
 		lastFrameTime = frameTime;
 
-		// note - RGB -> greyscale should be done here, but has not been
-		// for cosmetic/experimental reasons (intention to try out alternate
-		// colour spaces - LAB, HSV, etc.)
-		// Substantial performance improvement available (~1/3 data with greyscale)
+		// Convert to greyscale if greyscale mode
+		Mat frame;
+		if ( greyscale ) {
+			cvtColor(sourceFrame, frame, CV_BGR2GRAY);
+		} else {
+			frame = sourceFrame;
+		}
 
+		lock_guard<mutex> datastructureLock(this->dsMutex);
+
+		// Calculate current frame difference from background
 		Mat blurBaseFrame;
 		Mat blurFrame;
 		GaussianBlur(frame, blurFrame, Size(s.blur_radius,s.blur_radius), s.blur_stdev, 0, BORDER_REFLECT_101);
@@ -114,38 +136,49 @@ void VideoProcessor::run() {
 		showDebugWindow(blurFrame, BLURRED_INPUT, showBlur, destroyBlur);
 		showDebugWindow(delta, BACKGROUND_DIFFERENCE, showDelta, destroyDelta);
 
+		// Threshold frame difference to detect motion
 		Mat detectionThresholdRgb;
 		threshold(delta, detectionThresholdRgb, s.detection_threshold, 255, THRESH_BINARY);
 		showDebugWindow(detectionThresholdRgb, THRESHOLDED_DELTA, showThreshold, destroyThreshold);
 		Mat detectionThreshold;
-		cvtColor(detectionThresholdRgb, detectionThreshold, COLOR_BGR2GRAY);
-		lock_guard<mutex> datastructureLock(this->dsMutex);
+		if ( !greyscale )
+			cvtColor(detectionThresholdRgb, detectionThreshold, COLOR_BGR2GRAY);
+		else
+			detectionThreshold = detectionThresholdRgb;
 
+		// Dilate the thresholded frame
+		Mat dilateDetectionKernel = getStructuringElement(
+					MORPH_ELLIPSE,
+					Size(2*s.dilateDetectionFactor, 2*s.dilateDetectionFactor),
+					Point(s.dilateDetectionFactor,s.dilateDetectionFactor)
+					);
 		Mat dilatedDetection;
 		for(Rect *maskZone: maskZones)
 			rectangle(detectionThreshold, *maskZone, Scalar(0), -1);
 		dilate(detectionThreshold, dilatedDetection, dilateDetectionKernel);
 		showDebugWindow(dilatedDetection, DILATED_THRESHOLD, showDilated, destroyDilated);
 
+		// Find contours and bounding boxes around thresholded objects
 		vector<vector<Point>> contours;
 		vector<Vec4i> hierarchy;
 		findContours(dilatedDetection, contours, hierarchy, RETR_EXTERNAL, CHAIN_APPROX_NONE);
+
 		Mat rectOutput;
-		frame.copyTo(rectOutput);
+		sourceFrame.copyTo(rectOutput);
 		vector<Rect> rects(contours.size());
 		for(ulong i=0; i<contours.size(); i++) {
 				Rect r = boundingRect(contours[i]);
 				rects[i] = r;
 		}
 
+		// Correlate and process detected motion
 		correlate(rects, frame, delta, this->frameIdCounter, frameTime);
-		detect(this->frameIdCounter, frame);
+		detect(this->frameIdCounter, sourceFrame);
 		endEntities(this->frameIdCounter, &borderRect);
 		paintEntities(rectOutput, this->frameIdCounter, frameTime, dFrameTime);
 
-		Mat dilatedBlending;
-		performBackgroundBlending(frame, backgroundFrame, delta, dilatedBlending, thresholdTime);
-		showDebugWindow(dilatedBlending, DILATED_BLENDING_THRESHOLD, showDilatedBlending, destroyDilatedBlending); // todo move back in to function
+
+		performBackgroundBlending(frame, backgroundFrame, delta, thresholdTime);
 		showDebugWindow(backgroundFrame, BACKGROUND_FRAME, showBackground, destroyBackground);
 
 		if ( this->showOutput.load() || this->outputImageObserver != nullptr )
@@ -164,7 +197,8 @@ void VideoProcessor::run() {
 	}
 }
 
-void VideoProcessor::showDebugWindow(const Mat &image, const char label[], atomic<bool> &control, bool &state) {
+void VideoProcessor::showDebugWindow(const Mat &image, const char label[], atomic<bool> &control, bool &state)
+{
 	if ( control.load() ) {
 		imshow(label, image);
 		state  = true;
@@ -174,7 +208,8 @@ void VideoProcessor::showDebugWindow(const Mat &image, const char label[], atomi
 	}
 }
 
-void VideoProcessor::destroyDebugWindows() {
+void VideoProcessor::destroyDebugWindows()
+{
 	if ( this->destroyOriginal ) {
 		destroyWindow(ORIGINAL_INPUT);
 		this->destroyOriginal = false;
@@ -209,7 +244,8 @@ void VideoProcessor::destroyDebugWindows() {
 	}
 }
 
-void VideoProcessor::detect(ulong frameId, Mat &frame) {
+void VideoProcessor::detect(ulong frameId, Mat &frame)
+{
 	for(DetectionZone *zone: this->detectionZones) {
 		for(Entity *e: this->entities) {
 			double ratio = 0;
@@ -228,7 +264,8 @@ void VideoProcessor::detect(ulong frameId, Mat &frame) {
 	}
 }
 
-void VideoProcessor::endEntities(ulong frameId, Rect *borderRect) {
+void VideoProcessor::endEntities(ulong frameId, Rect *borderRect)
+{
 	list<Entity*> toRemove;
 	for(Entity *e: this->entities) {
 		if ( (e->lastUpdateFrameId < frameId && e->bbHistory.size() == 1) ||  // remove blips
@@ -247,7 +284,8 @@ void VideoProcessor::endEntities(ulong frameId, Rect *borderRect) {
 	}
 }
 
-void VideoProcessor::paintEntities(Mat &paint, ulong frameId, double frameTime, double dFrameTime) {
+void VideoProcessor::paintEntities(Mat &paint, ulong frameId, double frameTime, double dFrameTime)
+{
 	for(Entity *e: this->entities) {
 		ostringstream str;
 		str << e->id;
@@ -277,7 +315,8 @@ void VideoProcessor::paintEntities(Mat &paint, ulong frameId, double frameTime, 
 	}
 }
 
-void VideoProcessor::paintDetectionZone(Mat &paint, DetectionZone *z) {
+void VideoProcessor::paintDetectionZone(Mat &paint, DetectionZone *z)
+{
 	rectangle(paint, z->zone, DETECTION_ZONE_COLOUR);
 
 	if ( !z->directional )
@@ -302,8 +341,9 @@ void VideoProcessor::paintDetectionZone(Mat &paint, DetectionZone *z) {
 	line(paint, Point(x,y), Point(x3, y3), DETECTION_ZONE_COLOUR);
 }
 
-void VideoProcessor::performBackgroundBlending(Mat& frame, Mat& baseFrame, Mat& delta, Mat &dilatedBlending, uint thresholdTime[]) {
-	int frameLength = delta.rows * delta.cols * 3;
+void VideoProcessor::performBackgroundBlending(Mat& frame, Mat& baseFrame, Mat& delta, uint thresholdTime[])
+{
+	int frameLength = delta.rows * delta.cols * delta.channels();
 
 	Mat blendingThreshold;
 	threshold(delta, blendingThreshold, s.blending_threshold, 255, THRESH_BINARY);
@@ -313,9 +353,11 @@ void VideoProcessor::performBackgroundBlending(Mat& frame, Mat& baseFrame, Mat& 
 													 Size(2*s.dilateBlendingFactor, 2*s.dilateBlendingFactor),
 													 Point(s.dilateBlendingFactor,s.dilateBlendingFactor)
 													 );
-	;
+
+	Mat dilatedBlending;
 	dilate(blendingThreshold, dilatedBlending, dilateBlendingKernel);
 
+	showDebugWindow(dilatedBlending, DILATED_BLENDING_THRESHOLD, showDilatedBlending, destroyDilatedBlending);
 
 	int threshCount = 0;
 	for(int x=0; x < frameLength; x++) {
@@ -339,19 +381,22 @@ void VideoProcessor::performBackgroundBlending(Mat& frame, Mat& baseFrame, Mat& 
 		baseFrame = frame;
 }
 
-bool VideoProcessor::sharesBorders(Rect *r1, Rect *r2, int w) {
+bool VideoProcessor::sharesBorders(Rect *r1, Rect *r2, int w)
+{
 	return r1->x <= r2->x + w ||
 			r1->x+r1->width >= r2->x+r2->width - w ||
 			r1->y <= r2->y + w ||
 			r1->y+r1->height >= r2->y+r2->height - w;
 }
 
-void VideoProcessor::requestShutdown(bool shutdown) {
+void VideoProcessor::requestShutdown(bool shutdown)
+{
 	lock_guard<mutex> datastructureLock(this->dsMutex);
 	this->shutdownRequested.store(shutdown);
 }
 
-void VideoProcessor::correlate(vector<Rect>& rects, Mat& frame, Mat& delta, ulong frameId, double frameTime) {
+void VideoProcessor::correlate(vector<Rect>& rects, Mat& frame, Mat& delta, ulong frameId, double frameTime)
+{
 	map<Rect*, list<tuple<Entity*, OverlapType, double>>> rectOverlaps;
 	map<Entity*, list<tuple<Rect*, OverlapType, double>>> entityOverlaps;
 
@@ -464,7 +509,8 @@ void VideoProcessor::correlate(vector<Rect>& rects, Mat& frame, Mat& delta, ulon
 	}
 }
 
-bool VideoProcessor::contains(const Rect &r, Point2i p) {
+bool VideoProcessor::contains(const Rect &r, Point2i p)
+{
 	int xl = r.x;
 	int xh = r.x + r.width;
 	int yl = r.y;
@@ -473,37 +519,44 @@ bool VideoProcessor::contains(const Rect &r, Point2i p) {
 	return p.x >= xl && p.x <= xh && p.y >= yl && p.y <= yh;
 }
 
-void VideoProcessor::addDetectionZone(const DetectionZone &z) {
+void VideoProcessor::addDetectionZone(const DetectionZone &z)
+{
 	lock_guard<mutex> datastructureLock(this->dsMutex);
 	this->detectionZones.push_back(new DetectionZone(z));
 }
 
-void VideoProcessor::removeDetectionZones(const function<bool(DetectionZone*)> &test) {
+void VideoProcessor::removeDetectionZones(const function<bool(DetectionZone*)> &test)
+{
 	lock_guard<mutex> datastructureLock(this->dsMutex);
 	this->detectionZones.remove_if(test);
 }
 
-void VideoProcessor::addMaskZone(const Rect &r) {
+void VideoProcessor::addMaskZone(const Rect &r)
+{
 	lock_guard<mutex> datastructureLock(this->dsMutex);
 	this->maskZones.push_back(new Rect(r));
 }
 
-void VideoProcessor::removeMaskZones(const function<bool(Rect*)> &test) {
+void VideoProcessor::removeMaskZones(const function<bool(Rect*)> &test)
+{
 	lock_guard<mutex> datastructureLock(this->dsMutex);
 	this->maskZones.remove_if(test);
 }
 
-VideoProcessorDetectionSettings* VideoProcessor::getCurrentConfiguration() {
+VideoProcessorDetectionSettings* VideoProcessor::getCurrentConfiguration()
+{
 	lock_guard<mutex> datastructureLock(this->dsMutex);
 	return new VideoProcessorDetectionSettings(s);
 }
 
-void VideoProcessor::setCurrentConfiguration(VideoProcessorDetectionSettings *newSettings) {
+void VideoProcessor::setCurrentConfiguration(VideoProcessorDetectionSettings *newSettings)
+{
 	lock_guard<mutex> datastructureLock(this->dsMutex);
 	this->s = *newSettings;
 }
 
-VideoProcessor::OverlapType VideoProcessor::overlaps(const Rect& r, const Rect& e, double &overlapRatio) {
+VideoProcessor::OverlapType VideoProcessor::overlaps(const Rect& r, const Rect& e, double &overlapRatio)
+{
 	bool etl = contains(e, r.tl());//e.contains(r.tl());
 	bool ebr = contains(e, r.br());//e.contains(r.br());
 	bool rtl = contains(r, e.tl());//r.contains(e.tl());

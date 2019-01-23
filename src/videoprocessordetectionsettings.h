@@ -38,6 +38,7 @@ struct cvqm::VideoProcessorDetectionSettings {
 	int dilateDetectionFactor = 7;
 	int dilateBlendingFactor = 11;
 	int borderWidth = 20;
+	bool greyscale = true;
 };
 
 #endif // VIDEOPROCESSORDETECTIONSETTINGS_H

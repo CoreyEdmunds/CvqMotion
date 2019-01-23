@@ -35,13 +35,15 @@ namespace cvqm {
 	class OutputImageObserver;
 }
 
-class cvqm::DetectionObserver {
+class cvqm::DetectionObserver
+{
 public:
 	virtual void detected(DetectionZone *zone, Entity *e, cv::Mat &frame) = 0;
 //	virtual ~DetectionObserver() {}
 };
 
-class cvqm::OutputImageObserver {
+class cvqm::OutputImageObserver
+{
 public:
 	virtual void renderedImage(const cv::Mat *image) = 0;
 //	virtual ~OutputImageObserver() ;
@@ -72,7 +74,7 @@ private:
 
 	cvqm::VideoProcessorDetectionSettings s;
 
-	void performBackgroundBlending(cv::Mat& frame, cv::Mat& baseFrame, cv::Mat& delta, cv::Mat &dilatedBlending, uint thresholdTime[]);
+	void performBackgroundBlending(cv::Mat& frame, cv::Mat& baseFrame, cv::Mat& delta, uint thresholdTime[]);
 	void detect(ulong frameid, cv::Mat& frame);
 	void correlate(std::vector<cv::Rect> &rects, cv::Mat& frame, cv::Mat& delta, ulong frameId, double frameTime);
 	void endEntities(ulong frameId, cv::Rect *borderRect);
