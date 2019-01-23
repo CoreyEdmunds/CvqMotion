@@ -39,14 +39,14 @@ class cvqm::DetectionObserver
 {
 public:
 	virtual void detected(DetectionZone *zone, Entity *e, cv::Mat &frame) = 0;
-//	virtual ~DetectionObserver() {}
+	virtual ~DetectionObserver();
 };
 
 class cvqm::OutputImageObserver
 {
 public:
 	virtual void renderedImage(const cv::Mat *image) = 0;
-//	virtual ~OutputImageObserver() ;
+	virtual ~OutputImageObserver();
 };
 
 class cvqm::VideoProcessor
@@ -76,22 +76,23 @@ private:
 
 	void performBackgroundBlending(cv::Mat& frame, cv::Mat& baseFrame, cv::Mat& delta, uint thresholdTime[]);
 	void detect(ulong frameid, cv::Mat& frame);
-	void correlate(std::vector<cv::Rect> &rects, cv::Mat& frame, cv::Mat& delta, ulong frameId, double frameTime);
+	void correlate(std::vector<cv::Rect> &rects, cv::Mat& frame, ulong frameId, double frameTime);
 	void endEntities(ulong frameId, cv::Rect *borderRect);
 	void paintEntities(cv::Mat &paint, ulong frameId, double frameTime, double dFrameTime);
 	void paintDetectionZone(cv::Mat &paint, DetectionZone *z);
 	bool sharesBorders(cv::Rect *r1, cv::Rect *r2, int w);
 	void destroyDebugWindows();
-	void showDebugWindow(const cv::Mat &image, const char label[], std::atomic<bool> &control, bool &state);
+	void showDebugWindow(const cv::Mat &image, const char label[], std::atomic<bool> &control, bool &shown);
+	void destroyDebugWindow(const char label[], bool &shown);
 
-	bool destroyOriginal = false;
-	bool destroyBlur = false;
-	bool destroyDelta = false;
-	bool destroyThreshold = false;
-	bool destroyBackground = false;
-	bool destroyDilated = false;
-	bool destroyDilatedBlending = false;
-	bool destroyOutput = false;
+	bool shownOriginal = false;
+	bool shownBlur = false;
+	bool shownDelta = false;
+	bool shownThreshold = false;
+	bool shownBackground = false;
+	bool shownDilated = false;
+	bool shownDilatedBlending = false;
+	bool shownOutput = false;
 
 	std::atomic<bool> shutdownRequested{false};
 public:
